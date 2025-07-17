@@ -1,0 +1,71 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      # Backend
+      - name: Build Backend Docker Image
+        run: docker build -t backend ./backend
+
+      # Frontend
+      - name: Build Frontend Docker Image
+        run: docker build -t frontend ./frontend
+
+      # (Optional) Run tests here
+      # - name: Run Backend Tests
+      #   run: |
+      #     cd backend
+      #     npm install
+      #     npm test
+      # - name: Run Frontend Tests
+      #   run: |
+      #     cd frontend
+      #     npm install
+      #     npm test
+
+  deploy:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v3
+
+      # Login to Docker Hub or ECR if needed
+      # - name: Login to Docker Hub
+      #   uses: docker/login-action@v3
+      #   with:
+      #     username: ${{ secrets.DOCKERHUB_USERNAME }}
+      #     password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # Push images (uncomment and configure as needed)
+      # - name: Push Backend Image
+      #   run: docker push yourrepo/backend:latest
+      # - name: Push Frontend Image
+      #   run: docker push yourrepo/frontend:latest
+
+      # Deploy with CDK (requires AWS credentials)
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Install CDK dependencies
+        run: |
+          cd infra
+          npm install
+
+      - name: Deploy CDK Stack
+        run: |
+          cd infra
+          npx cdk deploy --require-approval never 
